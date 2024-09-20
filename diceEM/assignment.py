@@ -61,8 +61,10 @@ def diceEM(experiment_data: List[NDArray[np.int_]],  # pylint: disable=C0103
 
         # YOUR CODE HERE. SET REQUIRED VARIABLES BY CALLING e-step AND m-step.
         # E-step: compute the expected counts given current parameters        
-  
+        expected_counts = e_step(experiment_data, bag_of_dice)
+
         # M-step: update the parameters given the expected counts
+        updated_bag_of_dice = m_step(expected_counts)
       
         prev_bag_of_dice: BagOfDice = bag_of_dice
         bag_of_dice = updated_bag_of_dice
@@ -108,6 +110,10 @@ def e_step(experiment_data: List[NDArray[np.int_]],
     # counts for each type over all the draws.  
 
     # PUT YOUR CODE HERE, FOLLOWING THE DIRECTIONS ABOVE
+    for i, draw in enumerate(experiment_data):
+        posterior = dice_posterior(draw, bag_of_dice)
+        expected_counts[0,:] += posterior*draw
+        expected_counts[1,:] += (1-posterior)*draw
 
     return expected_counts
 
@@ -135,9 +141,10 @@ def m_step(expected_counts_by_die: NDArray[np.float_]):
     updated_type_2_frequency = np.sum(expected_counts_by_die[1])
 
     # REPLACE EACH NONE BELOW WITH YOUR CODE. 
-    updated_priors = None
-    updated_type_1_face_probs = None
-    updated_type_2_face_probs = None
+    updated_priors = np.array((updated_type_1_frequency, updated_type_2_frequency))
+    updated_priors /= np.sum(updated_priors) # probabilities must sum to 1.
+    updated_type_1_face_probs = expected_counts_by_die[0,:]/np.sum(expected_counts_by_die[0,:])
+    updated_type_2_face_probs = expected_counts_by_die[1,:]/np.sum(expected_counts_by_die[1,:])
     
     updated_bag_of_dice = BagOfDice(updated_priors,
                                     [Die(updated_type_1_face_probs),
@@ -182,3 +189,11 @@ def generate_sample(die_type_counts: Tuple[int],
     # array of num_draws arrays each containing rolls_per_draw rolls.
 
     return list(map(roll, die_types_drawn))
+
+if __name__ == "__main__":
+    sample_draw = [1, 1, 1, 4, 1, 1, 1]
+    result = dice_posterior(sample_draw, 
+                            BagOfDice([1/3, 2/3],
+                            [Die([0.1, 0.1, 0.1, 0.4, 0.1, 0.1, 0.1]),
+                                Die([1/7]*7)]))
+    print(result)
